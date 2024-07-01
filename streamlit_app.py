@@ -2,39 +2,118 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
+import math
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-"""
-# Welcome to Streamlit!
+st.set_page_config(page_title='Streamlit', page_icon='🔴')
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+st.sidebar.header("🔴 Streamlit")
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+if st.sidebar.button("❄"):
+    st.snow()
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+pagina = st.sidebar.selectbox(
+    "Escolha",
+    ('Lista de compras', 'Calculadora', 'Visualizar CSV', 'Classificação')
+)
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+if pagina == 'Lista de compras':
+    st.header("📜 Lista de compras")
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+    produtos = st.multiselect(
+     'Produtos para comprar',
+     ['Arroz', 'Feijão', 'Batata', 'Tomate']
+    )
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
+    st.write('Sua lista de compras')
+    for i in produtos:
+        st.checkbox(i)
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+
+    
+if pagina == "Calculadora":
+    st.header("📐 Calculadora")
+    st.write("Calculadora de equação de 2º grau")
+
+    st.write("Fórmula de Bhaskara")
+    st.latex(r'''
+    x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+    ''')
+
+    a = st.number_input('Digite o valor de a', min_value=-100, max_value=100, value=0, step=1)
+    b = st.number_input('Digite o valor de b', min_value=-100, max_value=100, value=0, step=1)
+    c = st.number_input('Digite o valor de c', min_value=-100, max_value=100, value=0, step=1)
+
+    def calcular_bhaskara(a, b, c):
+        delta = b**2 - 4*a*c
+        if delta < 0:
+            return "A equação não possui raízes reais"
+        elif delta == 0:
+            x = -b / (2*a)
+            return f"A equação possui uma raiz real: x = {x}"
+        else:
+            x1 = round((-b + math.sqrt(delta)) / (2*a), 3)
+            x2 = round((-b - math.sqrt(delta)) / (2*a), 3)
+            return f"Resultados x1 = {x1} x2 = {x2}"
+
+    if st.button("✔ Calcular"):
+        resultado = calcular_bhaskara(a, b, c)
+        st.write(resultado)
+
+
+
+if pagina == "Visualizar CSV":
+    st.header("📊 Visualizar CSV")
+
+    st.subheader('Upload de CSV')
+    uploaded_file = st.file_uploader("Escolha um arquivo CSV", type=['csv'])
+
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+
+        st.write("Dados do arquivo CSV:")
+
+        selected_columns = st.multiselect(
+            'Selecione as colunas para exibir',
+            options=df.columns.tolist(),
+            default=df.columns.tolist()
+        )
+
+        st.write(df[selected_columns])
+
+        
+
+if pagina == 'Classificação':
+    st.header("🤖 Classificação")
+
+    #pip install scikit-learn
+    from sklearn.datasets import load_iris
+    from sklearn.model_selection import train_test_split
+    from sklearn import tree
+    from sklearn.metrics import accuracy_score
+
+    iris = load_iris()
+
+    dados = iris.data
+    especies = iris.target
+
+    porcentagem = st.slider(
+        'Escolha a porcentagem de treino',
+        0.01, 0.99, (0.30)
+    )
+    
+    criterios = st.selectbox(
+        'Escolha o seu critério',
+        ('gini', 'entropy', 'log_loss')
+    )
+
+    if st.button("Treinar modelo"):
+        x_train, x_test, y_train, y_test = train_test_split(dados, especies, test_size=porcentagem, random_state=42)
+        clf = tree.DecisionTreeClassifier(criterion=criterios)
+        clf.fit(x_train, y_train)
+        prev = clf.predict(x_test)
+        
+        acuracia = round(((accuracy_score(prev, y_test))*100), 3)
+
+        st.write(f"Sua acurácia é de {acuracia}")
